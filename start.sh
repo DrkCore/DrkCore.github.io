@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-jekyll server
+screen -S blog -m -d bundle exec jekyll serve
