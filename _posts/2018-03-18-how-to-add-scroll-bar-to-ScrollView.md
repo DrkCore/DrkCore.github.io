@@ -112,7 +112,7 @@ public class ScrollBindHelper implements SeekBar.OnSeekBarChangeListener, Nested
 可见性的切换我们只要切换滑块控件的 Visible 属性即可而滚动和触控都在我们的回调之中，最后停止操作若干秒后消失可以直接使用一个 handler 搞定。我们创建一个只响应最后一次操作的 Handler 基类。
 
 ```java
-/ /只响应最后一次操作的基类
+//只响应最后一次操作的基类
 public abstract class LastMsgHandler extends Handler {
 
 	// 标记是第几次 count

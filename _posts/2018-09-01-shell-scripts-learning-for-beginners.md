@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Shell：脚本的简要入门"
+title:  "Linux：Shell 脚本的简要入门"
 date:   2018-09-01 22:39:50 +0800
 categories: Linux Shell
 ---
