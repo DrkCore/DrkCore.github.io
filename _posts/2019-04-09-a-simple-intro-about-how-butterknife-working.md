@@ -76,6 +76,84 @@ implementation 'com.google.auto.service:auto-service:1.0-rc4'
 implementation 'com.google.auto:auto-common:0.10'
 ```
 
+注解处理器需要继承 `AbstractProcessor` 并拓展相关的方法，以下是注解处理器的部分源码：
+
+`process()` 方法是收集注解信息、解析并生成源代码的核心逻辑，可以看到这里将逻辑分拆到其他方法和类中：
+
+```java
+@Override public boolean process(Set<? extends TypeElement> elements, RoundEnvironment env) {
+  //收集注解信息
+  Map<TypeElement, BindingSet> bindingMap = findAndParseTargets(env);
+
+  //生成注解类源代码
+  for (Map.Entry<TypeElement, BindingSet> entry : bindingMap.entrySet()) {
+    TypeElement typeElement = entry.getKey();
+    BindingSet binding = entry.getValue();
+
+    JavaFile javaFile = binding.brewJava(sdk, debuggable);
+    try {
+      javaFile.writeTo(filer);
+    } catch (IOException e) {
+      error(typeElement, "Unable to write binding for type %s: %s", typeElement, e.getMessage());
+    }
+  }
+
+  return false;
+}
+```
+
+`findAndParseTargets()` 收集
+
+```java
+  private Map<TypeElement, BindingSet> findAndParseTargets(RoundEnvironment env) {
+    Map<TypeElement, BindingSet.Builder> builderMap = new LinkedHashMap<>();
+    Set<TypeElement> erasedTargetNames = new LinkedHashSet<>();
+
+    //收集 BindView 注解的信息，并将之填入 builderMap 中
+    for (Element element : env.getElementsAnnotatedWith(BindView.class)) {
+      try {
+        parseBindView(element, builderMap, erasedTargetNames);
+      } catch (Exception e) {
+        logParsingError(element, BindView.class, e);
+      }
+    }
+
+    //收集所有监听器的注解i信息，其中包括了 OnClick 注解
+    for (Class<? extends Annotation> listener : LISTENERS) {
+      findAndParseListener(env, listener, builderMap, erasedTargetNames);
+    }
+
+    //处理父类逻辑
+    Deque<Map.Entry<TypeElement, BindingSet.Builder>> entries =
+        new ArrayDeque<>(builderMap.entrySet());
+    Map<TypeElement, BindingSet> bindingMap = new LinkedHashMap<>();
+    while (!entries.isEmpty()) {
+      Map.Entry<TypeElement, BindingSet.Builder> entry = entries.removeFirst();
+
+      TypeElement type = entry.getKey();
+      BindingSet.Builder builder = entry.getValue();
+
+      TypeElement parentType = findParentType(type, erasedTargetNames);
+      if (parentType == null) {
+        bindingMap.put(type, builder.build());
+      } else {
+        BindingSet parentBinding = bindingMap.get(parentType);
+        if (parentBinding != null) {
+          builder.setParent(parentBinding);
+          bindingMap.put(type, builder.build());
+        } else {
+          // 存在父类但是还未处理，
+          entries.addLast(entry);
+        }
+      }
+    }
+
+    return bindingMap;
+  }
+```
+
+
+
 
 
 [1]:https://github.com/wyouflf/xUtils3
